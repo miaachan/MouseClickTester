@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mouse Click Tester</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box}
+.card{background:white;padding:30px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.1);width:700px;text-align:center}
+#clickArea,.holdArea{margin-top:20px;padding:50px;border:2px dashed #888;border-radius:12px;user-select:none}
+#clickArea{cursor:pointer}
+.holdArea{background:#fcfcfc}
+.stat{font-size:18px;margin:8px 0}
+.warn{color:#c0392b;font-weight:bold}
+.good{color:#2e7d32;font-weight:bold}
+.section{margin-top:22px;padding-top:16px;border-top:1px solid #eee}
+.subhead{font-size:18px;font-weight:bold;margin-bottom:10px}
+.helper{font-size:13px;color:#666;margin-top:6px;line-height:1.4}
+button{margin-top:15px;padding:8px 14px;border:none;border-radius:8px;background:#222;color:white;cursor:pointer}
+.holdGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+
+#logBox{
+margin-top:18px;
+height:180px;
+overflow-y:auto;
+border:1px solid #ddd;
+border-radius:10px;
+padding:10px;
+background:#fafafa;
+text-align:left;
+font-size:13px;
+font-family:monospace;
+}
+
+.log-warn{color:#c0392b}
+.log-good{color:#2e7d32}
+.log-neutral{color:#333}
+.log-line{margin-bottom:4px}
+.hold-active{border-color:#2e7d32 !important;background:#f1fbf3 !important}
+.hold-fail{border-color:#c0392b !important;background:#fff3f2 !important}
+@media (max-width: 760px){
+  .card{width:100%}
+  .holdGrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Mouse Click Tester</h2>
+
+<div class="stat">Left Clicks: <span id="leftCount">0</span></div>
+<div class="stat">Right Clicks: <span id="rightCount">0</span></div>
+<div class="stat">Left Double Clicks: <span id="leftDouble">0</span></div>
+<div class="stat">Right Double Clicks: <span id="rightDouble">0</span></div>
+<div class="stat">Possible Lost Clicks: <span id="lostCount">0</span></div>
+<div class="stat">Left Hold Failures: <span id="leftHoldFailCount">0</span></div>
+<div class="stat">Right Hold Failures: <span id="rightHoldFailCount">0</span></div>
+<div class="stat">Last Interval: <span id="interval">-</span> ms</div>
+<div id="status" class="stat">Status: waiting</div>
+
+<div class="section">
+<div class="subhead">Click Test</div>
+<div id="clickArea">Click Here (Left or Right)</div>
+<div class="helper">Use this area to test switch bounce and lost clicks.</div>
+</div>
+
+<div class="section">
+<div class="subhead">Hold Test</div>
+<div class="holdGrid">
+  <div>
+    <div class="stat">Left Hold Time: <span id="leftHoldTime">0</span> ms</div>
+    <div class="stat">Left Hold State: <span id="leftHoldState">idle</span></div>
+    <div id="leftHoldArea" class="holdArea">Press and HOLD LEFT CLICK here. If it releases by itself, it will be flagged.</div>
+    <div class="helper">Hold the left button to test whether the switch can stay pressed.</div>
+  </div>
+  <div>
+    <div class="stat">Right Hold Time: <span id="rightHoldTime">0</span> ms</div>
+    <div class="stat">Right Hold State: <span id="rightHoldState">idle</span></div>
+    <div id="rightHoldArea" class="holdArea">Press and HOLD RIGHT CLICK here. If it releases by itself, it will be flagged.</div>
+    <div class="helper">Hold the right button to test whether the switch can stay pressed.</div>
+  </div>
+</div>
+</div>
+
+<button onclick="reset()">Reset</button>
+<div id="logBox"></div>
+</div>
+
+<script>
+let leftCount = 0
+let rightCount = 0
+let leftDouble = 0
+let rightDouble = 0
+let lostCount = 0
+let leftHoldFailCount = 0
+let rightHoldFailCount = 0
+
+const BOUNCE_MS = 60
+const SESSION_GAP_MS = 700
+const SESSION_BUILD_GAP_MS = 350
+const MIN_STEADY_SAMPLES = 4
+const HISTORY_SIZE = 8
+const HOLD_FAIL_MIN_MS = 120
+const HOLD_OK_LOG_MS = 600
+
+const state = {
+    left: { lastClick: null, intervals: [] },
+    right: { lastClick: null, intervals: [] },
+    hold: {
+        left: { active: false, startTime: null, timer: null, holdLogged: false },
+        right: { active: false, startTime: null, timer: null, holdLogged: false }
+    }
+}
+
+const clickArea = document.getElementById('clickArea')
+const leftHoldArea = document.getElementById('leftHoldArea')
+const rightHoldArea = document.getElementById('rightHoldArea')
+const logBox = document.getElementById('logBox')
+
+const holdEls = {
+  left: {
+    area: leftHoldArea,
+    time: document.getElementById('leftHoldTime'),
+    state: document.getElementById('leftHoldState'),
+    failCount: document.getElementById('leftHoldFailCount'),
+    buttonCode: 0,
+    label: 'LEFT'
+  },
+  right: {
+    area: rightHoldArea,
+    time: document.getElementById('rightHoldTime'),
+    state: document.getElementById('rightHoldState'),
+    failCount: document.getElementById('rightHoldFailCount'),
+    buttonCode: 2,
+    label: 'RIGHT'
+  }
+}
+
+function log(message,type='neutral'){
+    const line=document.createElement('div')
+    line.className='log-line log-'+type
+    const t=new Date().toLocaleTimeString()
+    line.textContent=`[${t}] ${message}`
+    logBox.appendChild(line)
+    logBox.scrollTop=logBox.scrollHeight
+}
+
+function median(arr){
+    if(arr.length === 0) return null
+    const sorted = [...arr].sort((a,b)=>a-b)
+    const mid = Math.floor(sorted.length / 2)
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+}
+
+function mean(arr){
+    if(arr.length === 0) return null
+    return arr.reduce((a,b)=>a+b,0) / arr.length
+}
+
+function stdDev(arr){
+    if(arr.length < 2) return 0
+    const avg = mean(arr)
+    const variance = arr.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / arr.length
+    return Math.sqrt(variance)
+}
+
+function mad(arr, med){
+    if(arr.length === 0 || med === null) return 0
+    return median(arr.map(v => Math.abs(v - med))) || 0
+}
+
+function rememberInterval(button, interval){
+    const intervals = state[button].intervals
+    intervals.push(interval)
+    if(intervals.length > HISTORY_SIZE) intervals.shift()
+}
+
+function resetSession(button){
+    state[button].intervals = []
+}
+
+function setStatus(text, warn){
+    const el = document.getElementById('status')
+    el.textContent = 'Status: ' + text
+    el.className = 'stat ' + (warn ? 'warn':'good')
+}
+
+function updateHoldState(side, text){
+    holdEls[side].state.textContent = text
+}
+
+function clearHoldTimer(side){
+    const holdState = state.hold[side]
+    if(holdState.timer){
+        clearInterval(holdState.timer)
+        holdState.timer = null
+    }
+}
+
+function startHold(side){
+    const holdState = state.hold[side]
+    const els = holdEls[side]
+    holdState.active = true
+    holdState.startTime = performance.now()
+    holdState.holdLogged = false
+    els.area.classList.remove('hold-fail')
+    els.area.classList.add('hold-active')
+    updateHoldState(side, `holding ${side} button...`)
+    els.time.textContent = '0'
+    setStatus(`${els.label} hold in progress`, false)
+
+    clearHoldTimer(side)
+    holdState.timer = setInterval(() => {
+        if(!holdState.active) return
+        const held = performance.now() - holdState.startTime
+        els.time.textContent = held.toFixed(0)
+        if(held >= HOLD_OK_LOG_MS && !holdState.holdLogged){
+            log(`${els.label} hold stable for ${held.toFixed(0)} ms`,'good')
+            holdState.holdLogged = true
+        }
+    }, 30)
+}
+
+function endHold(side, isUnexpected=false){
+    const holdState = state.hold[side]
+    const els = holdEls[side]
+    if(!holdState.active) return
+    const held = performance.now() - holdState.startTime
+    holdState.active = false
+    clearHoldTimer(side)
+    els.time.textContent = held.toFixed(0)
+    els.area.classList.remove('hold-active')
+
+    if(isUnexpected || held < HOLD_FAIL_MIN_MS){
+        if(side === 'left'){
+            leftHoldFailCount++
+            els.failCount.textContent = leftHoldFailCount
+        } else {
+            rightHoldFailCount++
+            els.failCount.textContent = rightHoldFailCount
+        }
+        els.area.classList.add('hold-fail')
+        updateHoldState(side, 'possible hold failure')
+        setStatus(`Possible ${els.label} hold failure detected`, true)
+        log(`${els.label} possible hold failure (released after ${held.toFixed(1)} ms)`,'warn')
+    } else {
+        updateHoldState(side, 'released normally')
+        setStatus(`${els.label} hold released normally`, false)
+        log(`${els.label} hold released normally after ${held.toFixed(1)} ms`,'good')
+    }
+}
+
+function processClick(button, label){
+    const now = performance.now()
+    const buttonState = state[button]
+
+    if(button === 'left'){
+        leftCount++
+        document.getElementById('leftCount').textContent = leftCount
+    } else {
+        rightCount++
+        document.getElementById('rightCount').textContent = rightCount
+    }
+
+    if(buttonState.lastClick === null){
+        buttonState.lastClick = now
+        log(`${label} first click`,'neutral')
+        return
+    }
+
+    const interval = now - buttonState.lastClick
+    document.getElementById('interval').textContent = interval.toFixed(1)
+
+    if(interval < BOUNCE_MS){
+        if(button === 'left'){
+            leftDouble++
+            document.getElementById('leftDouble').textContent = leftDouble
+        } else {
+            rightDouble++
+            document.getElementById('rightDouble').textContent = rightDouble
+        }
+        setStatus(`Possible ${label} switch bounce detected`, true)
+        log(`${label} possible switch bounce (${interval.toFixed(1)} ms)`,'warn')
+        buttonState.lastClick = now
+        return
+    }
+
+    const history = buttonState.intervals
+    const historyMedian = median(history)
+    const historyStdDev = stdDev(history)
+    const historyMad = mad(history, historyMedian)
+    const isSteady = history.length >= MIN_STEADY_SAMPLES && historyStdDev <= 35
+
+    const lostThreshold = historyMedian === null
+        ? null
+        : Math.max(
+            historyMedian * 1.6,
+            historyMedian + 90,
+            historyMedian + (historyMad * 4),
+            260
+        )
+
+    const looksLikeLostClick = isSteady && lostThreshold !== null && interval > lostThreshold && interval < SESSION_GAP_MS
+
+    if(looksLikeLostClick){
+        lostCount++
+        document.getElementById('lostCount').textContent = lostCount
+        setStatus(`Possible ${label} lost click detected`, true)
+        log(`${label} possible lost click (gap ${interval.toFixed(1)} ms, baseline ${historyMedian.toFixed(1)} ms, threshold ${lostThreshold.toFixed(1)} ms)`,'warn')
+        resetSession(button)
+    } else {
+        setStatus(`${label} click OK`, false)
+        log(`${label} click (${interval.toFixed(1)} ms)`,'good')
+
+        if(interval <= SESSION_BUILD_GAP_MS){
+            rememberInterval(button, interval)
+        } else if(interval >= SESSION_GAP_MS){
+            resetSession(button)
+            log(`${label} session reset after long pause (${interval.toFixed(1)} ms)`,'neutral')
+        } else {
+            resetSession(button)
+            rememberInterval(button, interval)
+        }
+    }
+
+    buttonState.lastClick = now
+}
+
+clickArea.addEventListener('contextmenu', e => e.preventDefault())
+leftHoldArea.addEventListener('contextmenu', e => e.preventDefault())
+rightHoldArea.addEventListener('contextmenu', e => e.preventDefault())
+
+clickArea.addEventListener('mouseup', e => {
+    if(e.button === 0) processClick('left', 'LEFT')
+    if(e.button === 2) processClick('right', 'RIGHT')
+})
+
+leftHoldArea.addEventListener('mousedown', e => {
+    if(e.button === 0) startHold('left')
+})
+rightHoldArea.addEventListener('mousedown', e => {
+    if(e.button === 2) startHold('right')
+})
+
+leftHoldArea.addEventListener('mouseup', e => {
+    if(e.button === 0) endHold('left', false)
+})
+rightHoldArea.addEventListener('mouseup', e => {
+    if(e.button === 2) endHold('right', false)
+})
+
+leftHoldArea.addEventListener('mouseleave', () => {
+    if(state.hold.left.active) updateHoldState('left', 'pointer left test area while holding')
+})
+rightHoldArea.addEventListener('mouseleave', () => {
+    if(state.hold.right.active) updateHoldState('right', 'pointer left test area while holding')
+})
+
+window.addEventListener('mouseup', e => {
+    if(e.button === 0 && state.hold.left.active) endHold('left', false)
+    if(e.button === 2 && state.hold.right.active) endHold('right', false)
+})
+
+window.addEventListener('blur', () => {
+    if(state.hold.left.active) endHold('left', true)
+    if(state.hold.right.active) endHold('right', true)
+})
+
+function reset(){
+    leftCount=0
+    rightCount=0
+    leftDouble=0
+    rightDouble=0
+    lostCount=0
+    leftHoldFailCount=0
+    rightHoldFailCount=0
+
+    state.left.lastClick = null
+    state.right.lastClick = null
+    state.left.intervals = []
+    state.right.intervals = []
+    state.hold.left.active = false
+    state.hold.left.startTime = null
+    state.hold.left.holdLogged = false
+    state.hold.right.active = false
+    state.hold.right.startTime = null
+    state.hold.right.holdLogged = false
+    clearHoldTimer('left')
+    clearHoldTimer('right')
+
+    document.getElementById('leftCount').textContent=0
+    document.getElementById('rightCount').textContent=0
+    document.getElementById('leftDouble').textContent=0
+    document.getElementById('rightDouble').textContent=0
+    document.getElementById('lostCount').textContent=0
+    document.getElementById('leftHoldFailCount').textContent=0
+    document.getElementById('rightHoldFailCount').textContent=0
+    document.getElementById('interval').textContent='-'
+    document.getElementById('status').textContent='Status: waiting'
+    holdEls.left.time.textContent='0'
+    holdEls.right.time.textContent='0'
+    updateHoldState('left', 'idle')
+    updateHoldState('right', 'idle')
+    holdEls.left.area.classList.remove('hold-active','hold-fail')
+    holdEls.right.area.classList.remove('hold-active','hold-fail')
+
+    logBox.innerHTML=''
+    log('Tester reset','neutral')
+}
+
+log('Mouse tester ready','neutral')
+log('Lost-click detection now uses steady rhythm baseline instead of fixed 500 ms','neutral')
+log('Left and right hold tests added to detect unexpected release while holding','neutral')
+</script>
+</body>
+</html>
