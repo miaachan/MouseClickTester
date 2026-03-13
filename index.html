@@ -1,99 +1,527 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Mouse Click Tester</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Input Tester</title>
 <style>
-body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box}
-.card{background:white;padding:30px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.1);width:700px;text-align:center}
-#clickArea,.holdArea{margin-top:20px;padding:50px;border:2px dashed #888;border-radius:12px;user-select:none}
-#clickArea{cursor:pointer}
-.holdArea{background:#fcfcfc}
-.stat{font-size:18px;margin:8px 0}
-.warn{color:#c0392b;font-weight:bold}
-.good{color:#2e7d32;font-weight:bold}
-.section{margin-top:22px;padding-top:16px;border-top:1px solid #eee}
-.subhead{font-size:18px;font-weight:bold;margin-bottom:10px}
-.helper{font-size:13px;color:#666;margin-top:6px;line-height:1.4}
-button{margin-top:15px;padding:8px 14px;border:none;border-radius:8px;background:#222;color:white;cursor:pointer}
-.holdGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
-
-#logBox{
-margin-top:18px;
-height:180px;
-overflow-y:auto;
-border:1px solid #ddd;
-border-radius:10px;
-padding:10px;
-background:#fafafa;
-text-align:left;
-font-size:13px;
-font-family:monospace;
+:root{
+  --key-u:38px;
+  --key-gap:3px;
+  --bg-primary:#1e2228;
+  --bg-secondary:#2e3440;
+  --bg-elevated:#3b4252;
+  --bg-surface:#434c5e;
+  --text-primary:#eceff4;
+  --text-secondary:#8a919e;
+  --accent-blue:#5e81ac;
+  --accent-hover:#81a1c1;
+  --color-good:#a3be8c;
+  --color-warn:#ebcb8b;
+  --color-danger:#bf616a;
+  --color-orange:#d08770;
 }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+.hidden{display:none!important}
 
-.log-warn{color:#c0392b}
-.log-good{color:#2e7d32}
-.log-neutral{color:#333}
-.log-line{margin-bottom:4px}
-.hold-active{border-color:#2e7d32 !important;background:#f1fbf3 !important}
-.hold-fail{border-color:#c0392b !important;background:#fff3f2 !important}
-@media (max-width: 760px){
-  .card{width:100%}
-  .holdGrid{grid-template-columns:1fr}
+/* Header */
+header{text-align:center;margin-bottom:20px}
+header h1{font-size:28px;font-weight:700;letter-spacing:-0.5px}
+header p{color:var(--text-secondary);font-size:14px;margin-top:4px}
+
+/* Tab Bar */
+.tab-bar{display:flex;gap:8px;margin-bottom:20px}
+.tab-btn{padding:10px 24px;font-size:14px;font-weight:600;border:1px solid var(--bg-surface);border-radius:8px;background:var(--bg-elevated);color:var(--text-secondary);cursor:pointer;transition:all .2s}
+.tab-btn:hover{background:var(--accent-hover);color:var(--text-primary);border-color:var(--accent-hover)}
+.tab-btn.active{background:var(--accent-blue);color:var(--text-primary);border-color:var(--accent-blue)}
+
+/* Main container */
+main{width:100%;max-width:960px}
+
+/* Section styling */
+.section{margin-bottom:18px;padding:18px;background:var(--bg-secondary);border-radius:12px}
+.section-title{font-size:16px;font-weight:600;margin-bottom:12px;color:var(--text-primary)}
+.helper{font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.4}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 16px;margin-bottom:16px}
+.stat{font-size:14px;padding:6px 0;color:var(--text-secondary)}
+.stat span{color:var(--text-primary);font-weight:600}
+.stat.warn span{color:var(--color-danger)}
+.stat.good span{color:var(--color-good)}
+
+/* Click test area */
+#clickArea{padding:40px;border:2px dashed var(--bg-surface);border-radius:12px;text-align:center;cursor:pointer;font-size:15px;color:var(--text-secondary);user-select:none;transition:border-color .2s}
+#clickArea:hover{border-color:var(--accent-hover)}
+#clickArea:active{border-color:var(--accent-blue);background:var(--bg-elevated)}
+
+/* Hold test */
+.hold-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.hold-panel .hold-stats{display:flex;gap:16px;font-size:13px;color:var(--text-secondary);margin-bottom:8px}
+.hold-panel .hold-stats span{color:var(--text-primary);font-weight:600}
+.holdArea{padding:30px 16px;border:2px dashed var(--bg-surface);border-radius:12px;text-align:center;font-size:13px;color:var(--text-secondary);user-select:none;transition:all .2s}
+.hold-active{border-color:var(--color-good)!important;background:rgba(163,190,140,.08)!important}
+.hold-fail{border-color:var(--color-danger)!important;background:rgba(191,97,106,.08)!important}
+
+/* Status bar */
+#status{font-size:14px;padding:8px 12px;border-radius:8px;background:var(--bg-elevated);text-align:center;margin-bottom:16px}
+
+/* Keyboard tab */
+.config-bar{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:12px 16px;background:var(--bg-secondary);border-radius:10px;font-size:13px;color:var(--text-secondary)}
+.config-bar input[type=range]{width:140px;cursor:pointer;accent-color:var(--accent-blue)}
+.config-bar .threshold-val{color:var(--color-warn);font-weight:700;min-width:40px}
+.kb-stats{display:flex;gap:20px;padding:10px 16px;background:var(--bg-secondary);border-radius:10px;font-size:13px;color:var(--text-secondary);margin-bottom:12px;flex-wrap:wrap}
+.kb-stats strong{color:var(--color-warn)}
+
+/* Sub-mode toggle */
+.sub-mode-bar{display:flex;gap:6px;margin-bottom:12px}
+.sub-mode-btn{padding:7px 16px;font-size:13px;font-weight:600;border:1px solid var(--bg-surface);border-radius:6px;background:var(--bg-elevated);color:var(--text-secondary);cursor:pointer;transition:all .2s}
+.sub-mode-btn:hover{color:var(--text-primary)}
+.sub-mode-btn.active{background:var(--accent-blue);color:var(--text-primary);border-color:var(--accent-blue)}
+
+/* Free type */
+#freeformArea{width:100%;min-height:100px;padding:14px;border:2px solid var(--bg-surface);border-radius:10px;background:var(--bg-elevated);color:var(--text-primary);font-size:15px;font-family:inherit;resize:vertical;outline:none;transition:border-color .2s}
+#freeformArea:focus{border-color:var(--accent-blue)}
+#freeformArea::placeholder{color:var(--text-secondary)}
+
+/* Typing test display */
+.word-display{display:flex;flex-direction:column;gap:12px;padding:20px;min-height:80px}
+.word-display .line{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.word-display .line.next-line{opacity:.4}
+.word-display .word{display:inline-flex;font-size:22px;font-family:'Roboto Mono',Consolas,monospace;letter-spacing:0.5px}
+.word-display .char{position:relative;transition:color .1s}
+.word-display .char.pending{color:var(--text-secondary)}
+.word-display .char.current{color:var(--text-secondary)}
+.word-display .char.current::before{content:"|";position:absolute;left:0;transform:translateX(-50%);color:var(--color-warn);animation:blink 1s infinite;font-weight:400}
+.word-display .char.correct{color:var(--text-primary)}
+.word-display .char.error{color:var(--color-danger)}
+.word-display .char.chatter{color:var(--color-orange);animation:chatter-char .3s ease-in-out 3}
+.word-display .char.extra{color:var(--color-danger);opacity:.6}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+@keyframes chatter-char{0%,100%{transform:scale(1)}50%{transform:scale(1.2);color:var(--color-warn)}}
+
+/* Chatter alert */
+.chatter-alert{display:flex;align-items:center;justify-content:center;padding:10px 18px;background:var(--color-orange);color:var(--bg-primary);border-radius:8px;font-size:14px;font-weight:600;margin-bottom:12px}
+.chatter-alert.pulse{animation:alert-pulse .5s ease-in-out}
+@keyframes alert-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+
+/* Visual Keyboard */
+.keeb-scroll{overflow-x:auto;padding-bottom:8px}
+.keeb{display:flex;gap:calc(var(--key-u) * 0.4);min-width:max-content;padding:4px}
+
+.keeb .key{display:flex;align-items:center;justify-content:center;border-radius:5px;height:var(--key-u);text-align:center;border:1px solid #555d6d;font-size:11px;color:var(--text-secondary);transition:all .15s;position:relative;flex-shrink:0;background:transparent}
+.keeb .filler{border-color:transparent!important;pointer-events:none}
+.keeb .cornerText{position:absolute;top:2px;right:4px;font-size:9px;color:var(--color-warn);font-weight:700}
+
+/* Key size classes */
+.oneU{width:var(--key-u)}
+.onePtwofiveU{width:calc(var(--key-u)*1.25 + var(--key-gap)*0.25)}
+.onePfiveU{width:calc(var(--key-u)*1.5 + var(--key-gap)*0.5)}
+.onePsevenfiveU{width:calc(var(--key-u)*1.75 + var(--key-gap)*0.75)}
+.twoU{width:calc(var(--key-u)*2 + var(--key-gap))}
+.twoPtwofiveU{width:calc(var(--key-u)*2.25 + var(--key-gap)*1.25)}
+.twoPsevenfiveU{width:calc(var(--key-u)*2.75 + var(--key-gap)*1.75)}
+.sixPtwofiveU{width:calc(var(--key-u)*6.25 + var(--key-gap)*5.25)}
+.zeroPthreeUH{height:calc(var(--key-u)*0.3)}
+.oneUH{height:var(--key-u)}
+.twoUH{height:calc(var(--key-u)*2 + var(--key-gap));line-height:calc(var(--key-u)*2 + var(--key-gap))}
+
+/* Keyboard layout sections */
+.alphaAfRowWrapper{display:flex;flex-direction:column}
+.fRow{display:flex;gap:var(--key-gap)}
+.alphasPart{display:flex;flex-direction:column;gap:var(--key-gap)}
+.alphasPart>div{display:flex;gap:var(--key-gap)}
+.addFunctions{display:flex;flex-direction:column;gap:var(--key-gap);align-items:center}
+.addFunctions>div{display:flex;gap:var(--key-gap)}
+.numPad{display:flex;flex-direction:column;gap:var(--key-gap);align-items:center}
+.numPad>div{display:flex;gap:var(--key-gap)}
+.numPadSmallerRow{display:flex;gap:var(--key-gap)}
+.numPadLargerRow{display:flex;gap:var(--key-gap);align-items:stretch}
+.numPadInsideCol{display:flex;flex-direction:column;gap:var(--key-gap)}
+.flexRowPlease{display:flex;gap:var(--key-gap)}
+
+/* Key states */
+.keeb .raise{transform:translateY(-4px)!important;background:var(--color-danger)!important;color:var(--text-primary)!important;border-color:transparent!important;transition-duration:.08s}
+.keeb .pressed{background:var(--bg-surface);border-color:var(--text-secondary)!important;color:var(--text-primary)}
+.keeb .chatter-highlight{border-color:var(--color-warn)!important;box-shadow:0 0 8px var(--color-warn);animation:chatter-key .5s ease-in-out}
+@keyframes chatter-key{0%,100%{box-shadow:0 0 4px var(--color-warn)}50%{box-shadow:0 0 12px var(--color-warn)}}
+
+/* Chatter report */
+.chatter-report{font-size:13px}
+.chatter-report table{width:100%;border-collapse:collapse;margin-top:8px}
+.chatter-report th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--bg-surface);color:var(--text-secondary);font-weight:600;font-size:12px}
+.chatter-report td{padding:6px 10px;border-bottom:1px solid rgba(67,76,94,.4)}
+.chatter-report tr.has-chatter td{color:var(--color-orange)}
+.chatter-report tr.clean td{color:var(--color-good)}
+.chatter-report .empty-msg{color:var(--text-secondary);font-style:italic}
+
+/* Event log */
+.log-section{margin-top:8px}
+#logBox{height:160px;overflow-y:auto;border:1px solid var(--bg-surface);border-radius:10px;padding:10px;background:var(--bg-secondary);font-size:12px;font-family:'Roboto Mono',Consolas,monospace}
+.log-line{margin-bottom:3px}
+.log-warn{color:var(--color-danger)}
+.log-good{color:var(--color-good)}
+.log-neutral{color:var(--text-secondary)}
+.log-chatter{color:var(--color-orange)}
+
+/* Reset button */
+.btn{padding:10px 20px;font-size:13px;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:all .2s}
+.btn-reset{background:var(--bg-elevated);color:var(--text-secondary);margin-top:12px}
+.btn-reset:hover{background:var(--color-danger);color:var(--text-primary)}
+
+/* Responsive */
+@media(max-width:768px){
+  .hold-grid{grid-template-columns:1fr}
+  .keyboard-visual-section{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr}
+  body{padding:16px 8px}
 }
 </style>
 </head>
 <body>
-<div class="card">
-<h2>Mouse Click Tester</h2>
 
-<div class="stat">Left Clicks: <span id="leftCount">0</span></div>
-<div class="stat">Right Clicks: <span id="rightCount">0</span></div>
-<div class="stat">Left Double Clicks: <span id="leftDouble">0</span></div>
-<div class="stat">Right Double Clicks: <span id="rightDouble">0</span></div>
-<div class="stat">Possible Lost Clicks: <span id="lostCount">0</span></div>
-<div class="stat">Left Hold Failures: <span id="leftHoldFailCount">0</span></div>
-<div class="stat">Right Hold Failures: <span id="rightHoldFailCount">0</span></div>
-<div class="stat">Last Interval: <span id="interval">-</span> ms</div>
-<div id="status" class="stat">Status: waiting</div>
+<header>
+  <h1>Input Tester</h1>
+  <p>Diagnostic tool for mouse switches &amp; keyboard chatter</p>
+</header>
 
-<div class="section">
-<div class="subhead">Click Test</div>
-<div id="clickArea">Click Here (Left or Right)</div>
-<div class="helper">Use this area to test switch bounce and lost clicks.</div>
-</div>
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="mouse">Mouse Testing</button>
+  <button class="tab-btn" data-tab="keyboard">Keyboard Testing</button>
+</nav>
 
-<div class="section">
-<div class="subhead">Hold Test</div>
-<div class="holdGrid">
-  <div>
-    <div class="stat">Left Hold Time: <span id="leftHoldTime">0</span> ms</div>
-    <div class="stat">Left Hold State: <span id="leftHoldState">idle</span></div>
-    <div id="leftHoldArea" class="holdArea">Press and HOLD LEFT CLICK here. If it releases by itself, it will be flagged.</div>
-    <div class="helper">Hold the left button to test whether the switch can stay pressed.</div>
+<main>
+<!-- ===== MOUSE TAB ===== -->
+<section id="mouseTab">
+  <div id="status" class="stat" style="font-size:14px;padding:8px 12px;border-radius:8px;background:var(--bg-elevated);text-align:center;margin-bottom:16px">Status: waiting</div>
+
+  <div class="section">
+    <div class="stats-grid">
+      <div class="stat">Left Clicks: <span id="leftCount">0</span></div>
+      <div class="stat">Right Clicks: <span id="rightCount">0</span></div>
+      <div class="stat">Left Doubles (Bounce): <span id="leftDouble">0</span></div>
+      <div class="stat">Right Doubles (Bounce): <span id="rightDouble">0</span></div>
+      <div class="stat">Possible Lost Clicks: <span id="lostCount">0</span></div>
+      <div class="stat">Left Hold Failures: <span id="leftHoldFailCount">0</span></div>
+      <div class="stat">Right Hold Failures: <span id="rightHoldFailCount">0</span></div>
+      <div class="stat">Last Interval: <span id="interval">-</span> ms</div>
+    </div>
   </div>
-  <div>
-    <div class="stat">Right Hold Time: <span id="rightHoldTime">0</span> ms</div>
-    <div class="stat">Right Hold State: <span id="rightHoldState">idle</span></div>
-    <div id="rightHoldArea" class="holdArea">Press and HOLD RIGHT CLICK here. If it releases by itself, it will be flagged.</div>
-    <div class="helper">Hold the right button to test whether the switch can stay pressed.</div>
-  </div>
-</div>
-</div>
 
-<button onclick="reset()">Reset</button>
-<div id="logBox"></div>
+  <div class="section">
+    <div class="section-title">Click Test</div>
+    <div id="clickArea">Click here with left or right button</div>
+    <div class="helper">Rapidly click to test for switch bounce. Click rhythmically to test for lost clicks.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Hold Test</div>
+    <div class="hold-grid">
+      <div class="hold-panel">
+        <div class="hold-stats">Time: <span id="leftHoldTime">0</span> ms &nbsp;|&nbsp; State: <span id="leftHoldState">idle</span></div>
+        <div id="leftHoldArea" class="holdArea">Press and HOLD left click here</div>
+        <div class="helper">Tests whether the left switch can stay pressed reliably.</div>
+      </div>
+      <div class="hold-panel">
+        <div class="hold-stats">Time: <span id="rightHoldTime">0</span> ms &nbsp;|&nbsp; State: <span id="rightHoldState">idle</span></div>
+        <div id="rightHoldArea" class="holdArea">Press and HOLD right click here</div>
+        <div class="helper">Tests whether the right switch can stay pressed reliably.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== KEYBOARD TAB ===== -->
+<section id="keyboardTab" class="hidden">
+  <div class="config-bar">
+    <label>Chatter Threshold:</label>
+    <input type="range" id="thresholdSlider" min="20" max="100" value="50">
+    <span id="thresholdValue" class="threshold-val">50ms</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--text-secondary)">Lower = more sensitive</span>
+  </div>
+
+  <div class="kb-stats">
+    <span>Total Key Events: <strong id="kbTotalKeys">0</strong></span>
+    <span>Chatter Detected: <strong id="kbChatterCount">0</strong></span>
+    <span id="kbAffectedKeys"></span>
+  </div>
+
+  <div class="sub-mode-bar">
+    <button class="sub-mode-btn active" data-submode="freetype">Free Type</button>
+    <button class="sub-mode-btn" data-submode="typingtest">Typing Test</button>
+  </div>
+
+  <!-- Free Type -->
+  <div id="freeTypeSection" class="section">
+    <div class="section-title">Free-Form Input</div>
+    <textarea id="freeformArea" rows="4" placeholder="Type anything here — any language, any key. Chatter detection runs in the background on all key events."></textarea>
+    <div class="helper">The visual keyboard below shows physical key presses. Chatter is detected regardless of what you type.</div>
+  </div>
+
+  <!-- Typing Test -->
+  <div id="typingTestSection" class="section hidden">
+    <div class="section-title">Typing Test</div>
+    <div id="wordDisplay" class="word-display"></div>
+    <div class="helper">Type the words shown. Press Space to advance. Chatter will be highlighted in orange.</div>
+  </div>
+
+  <!-- Chatter Alert -->
+  <div id="chatterAlert" class="chatter-alert hidden">
+    Chatter: <strong id="chatterKey" style="margin:0 4px"></strong> (<span id="chatterTime"></span>ms)
+  </div>
+
+  <!-- Visual Keyboard -->
+  <div class="section keyboard-visual-section">
+    <div class="section-title">Key Visualization</div>
+    <div class="keeb-scroll">
+      <div class="keeb" id="visualKeyboard">
+        <div class="alphaAfRowWrapper">
+          <div class="fRow">
+            <div id="Escape" class="oneU key">Esc</div>
+            <div class="oneU key filler"></div>
+            <div id="F1" class="oneU key">F1</div>
+            <div id="F2" class="oneU key">F2</div>
+            <div id="F3" class="oneU key">F3</div>
+            <div id="F4" class="oneU key">F4</div>
+            <div class="oneU key filler"></div>
+            <div id="F5" class="oneU key">F5</div>
+            <div id="F6" class="oneU key">F6</div>
+            <div id="F7" class="oneU key">F7</div>
+            <div id="F8" class="oneU key">F8</div>
+            <div class="oneU key filler"></div>
+            <div id="F9" class="oneU key">F9</div>
+            <div id="F10" class="oneU key">F10</div>
+            <div id="F11" class="oneU key">F11</div>
+            <div id="F12" class="oneU key">F12</div>
+          </div>
+          <div class="zeroPthreeUH key filler"></div>
+          <div class="alphasPart">
+            <div>
+              <div id="Backquote" class="oneU key">`</div>
+              <div id="Digit1" class="oneU key">1</div>
+              <div id="Digit2" class="oneU key">2</div>
+              <div id="Digit3" class="oneU key">3</div>
+              <div id="Digit4" class="oneU key">4</div>
+              <div id="Digit5" class="oneU key">5</div>
+              <div id="Digit6" class="oneU key">6</div>
+              <div id="Digit7" class="oneU key">7</div>
+              <div id="Digit8" class="oneU key">8</div>
+              <div id="Digit9" class="oneU key">9</div>
+              <div id="Digit0" class="oneU key">0</div>
+              <div id="Minus" class="oneU key">-</div>
+              <div id="Equal" class="oneU key">=</div>
+              <div id="Backspace" class="twoU key">Bksp</div>
+            </div>
+            <div>
+              <div id="Tab" class="onePfiveU key">Tab</div>
+              <div id="KeyQ" class="oneU key">Q</div>
+              <div id="KeyW" class="oneU key">W</div>
+              <div id="KeyE" class="oneU key">E</div>
+              <div id="KeyR" class="oneU key">R</div>
+              <div id="KeyT" class="oneU key">T</div>
+              <div id="KeyY" class="oneU key">Y</div>
+              <div id="KeyU" class="oneU key">U</div>
+              <div id="KeyI" class="oneU key">I</div>
+              <div id="KeyO" class="oneU key">O</div>
+              <div id="KeyP" class="oneU key">P</div>
+              <div id="BracketLeft" class="oneU key">[</div>
+              <div id="BracketRight" class="oneU key">]</div>
+              <div id="Backslash" class="onePfiveU key">\</div>
+            </div>
+            <div>
+              <div id="CapsLock" class="onePsevenfiveU key">Caps</div>
+              <div id="KeyA" class="oneU key">A</div>
+              <div id="KeyS" class="oneU key">S</div>
+              <div id="KeyD" class="oneU key">D</div>
+              <div id="KeyF" class="oneU key">F</div>
+              <div id="KeyG" class="oneU key">G</div>
+              <div id="KeyH" class="oneU key">H</div>
+              <div id="KeyJ" class="oneU key">J</div>
+              <div id="KeyK" class="oneU key">K</div>
+              <div id="KeyL" class="oneU key">L</div>
+              <div id="Semicolon" class="oneU key">;</div>
+              <div id="Quote" class="oneU key">'</div>
+              <div id="Enter" class="twoPtwofiveU key">Enter</div>
+            </div>
+            <div>
+              <div id="ShiftLeft" class="twoPtwofiveU key">Shift</div>
+              <div id="KeyZ" class="oneU key">Z</div>
+              <div id="KeyX" class="oneU key">X</div>
+              <div id="KeyC" class="oneU key">C</div>
+              <div id="KeyV" class="oneU key">V</div>
+              <div id="KeyB" class="oneU key">B</div>
+              <div id="KeyN" class="oneU key">N</div>
+              <div id="KeyM" class="oneU key">M</div>
+              <div id="Comma" class="oneU key">,</div>
+              <div id="Period" class="oneU key">.</div>
+              <div id="Slash" class="oneU key">/</div>
+              <div id="ShiftRight" class="twoPsevenfiveU key">Shift</div>
+            </div>
+            <div>
+              <div id="ControlLeft" class="onePtwofiveU key">Ctrl</div>
+              <div id="OSLeft" class="onePtwofiveU key">Win</div>
+              <div id="AltLeft" class="onePtwofiveU key">Alt</div>
+              <div id="Space" class="sixPtwofiveU key">Space</div>
+              <div id="AltRight" class="onePtwofiveU key">Alt</div>
+              <div id="OSRight" class="onePtwofiveU key">Win</div>
+              <div id="ContextMenu" class="onePtwofiveU key">Menu</div>
+              <div id="ControlRight" class="onePtwofiveU key">Ctrl</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="addFunctions">
+          <div>
+            <div id="PrintScreen" class="oneU key">PrtSc</div>
+            <div id="ScrollLock" class="oneU key">ScrLk</div>
+            <div id="Pause" class="oneU key">Pause</div>
+          </div>
+          <div class="zeroPthreeUH key filler"></div>
+          <div>
+            <div id="Insert" class="oneU key">Ins</div>
+            <div id="Home" class="oneU key">Home</div>
+            <div id="PageUp" class="oneU key">PgUp</div>
+          </div>
+          <div>
+            <div id="Delete" class="oneU key">Del</div>
+            <div id="End" class="oneU key">End</div>
+            <div id="PageDown" class="oneU key">PgDn</div>
+          </div>
+          <div class="oneUH key filler"></div>
+          <div>
+            <div class="oneU key filler"></div>
+            <div id="ArrowUp" class="oneU key">Up</div>
+            <div class="oneU key filler"></div>
+          </div>
+          <div>
+            <div id="ArrowLeft" class="oneU key">Left</div>
+            <div id="ArrowDown" class="oneU key">Down</div>
+            <div id="ArrowRight" class="oneU key">Right</div>
+          </div>
+        </div>
+
+        <div class="numPad">
+          <div class="oneU key filler"></div>
+          <div class="zeroPthreeUH key filler"></div>
+          <div class="numPadSmallerRow">
+            <div id="NumLock" class="oneU key">Num</div>
+            <div id="NumpadDivide" class="oneU key">/</div>
+            <div id="NumpadMultiply" class="oneU key">*</div>
+            <div id="NumpadSubtract" class="oneU key">-</div>
+          </div>
+          <div class="numPadLargerRow">
+            <div class="numPadInsideCol">
+              <div class="flexRowPlease">
+                <div id="Numpad7" class="oneU key">7</div>
+                <div id="Numpad8" class="oneU key">8</div>
+                <div id="Numpad9" class="oneU key">9</div>
+              </div>
+              <div class="flexRowPlease">
+                <div id="Numpad4" class="oneU key">4</div>
+                <div id="Numpad5" class="oneU key">5</div>
+                <div id="Numpad6" class="oneU key">6</div>
+              </div>
+            </div>
+            <div id="NumpadAdd" class="oneU key twoUH">+</div>
+          </div>
+          <div class="numPadLargerRow">
+            <div class="numPadInsideCol">
+              <div class="flexRowPlease">
+                <div id="Numpad1" class="oneU key">1</div>
+                <div id="Numpad2" class="oneU key">2</div>
+                <div id="Numpad3" class="oneU key">3</div>
+              </div>
+              <div class="flexRowPlease">
+                <div id="Numpad0" class="twoU key">0</div>
+                <div id="NumpadDecimal" class="oneU key">.</div>
+              </div>
+            </div>
+            <div id="NumpadEnter" class="oneU key twoUH">Ent</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chatter Report -->
+  <div class="section">
+    <div class="section-title">Chatter Report</div>
+    <div id="chatterReport" class="chatter-report">
+      <p class="empty-msg">Press keys to build timing data. Keys with detected chatter will appear here.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== EVENT LOG ===== -->
+<div class="section log-section">
+  <div class="section-title">Event Log</div>
+  <div id="logBox"></div>
+  <button class="btn btn-reset" onclick="resetAll()">Reset All</button>
 </div>
+</main>
 
 <script>
-let leftCount = 0
-let rightCount = 0
-let leftDouble = 0
-let rightDouble = 0
-let lostCount = 0
-let leftHoldFailCount = 0
-let rightHoldFailCount = 0
+/* ===== SHARED ===== */
+const logBox = document.getElementById('logBox')
+let activeTab = 'mouse'
+let activeSubMode = 'freetype'
+
+function log(msg, type='neutral') {
+  const line = document.createElement('div')
+  line.className = 'log-line log-' + type
+  const t = new Date().toLocaleTimeString()
+  line.textContent = `[${t}] ${msg}`
+  logBox.appendChild(line)
+  logBox.scrollTop = logBox.scrollHeight
+}
+
+function median(arr) {
+  if (!arr.length) return null
+  const s = [...arr].sort((a,b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 === 0 ? (s[m-1] + s[m]) / 2 : s[m]
+}
+function mean(arr) { return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : null }
+function stdDev(arr) {
+  if (arr.length < 2) return 0
+  const avg = mean(arr)
+  return Math.sqrt(arr.reduce((s,v) => s + (v-avg)**2, 0) / arr.length)
+}
+function mad(arr, med) {
+  if (!arr.length || med === null) return 0
+  return median(arr.map(v => Math.abs(v - med))) || 0
+}
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeTab = btn.dataset.tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    document.getElementById('mouseTab').classList.toggle('hidden', activeTab !== 'mouse')
+    document.getElementById('keyboardTab').classList.toggle('hidden', activeTab !== 'keyboard')
+  })
+})
+
+// Sub-mode switching
+document.querySelectorAll('.sub-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeSubMode = btn.dataset.submode
+    document.querySelectorAll('.sub-mode-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    document.getElementById('freeTypeSection').classList.toggle('hidden', activeSubMode !== 'freetype')
+    document.getElementById('typingTestSection').classList.toggle('hidden', activeSubMode !== 'typingtest')
+    if (activeSubMode === 'typingtest') initTypingTest()
+  })
+})
+
+/* ===== MOUSE MODULE ===== */
+let leftCount = 0, rightCount = 0, leftDouble = 0, rightDouble = 0, lostCount = 0
+let leftHoldFailCount = 0, rightHoldFailCount = 0
 
 const BOUNCE_MS = 60
 const SESSION_GAP_MS = 700
@@ -103,314 +531,501 @@ const HISTORY_SIZE = 8
 const HOLD_FAIL_MIN_MS = 120
 const HOLD_OK_LOG_MS = 600
 
-const state = {
-    left: { lastClick: null, intervals: [] },
-    right: { lastClick: null, intervals: [] },
-    hold: {
-        left: { active: false, startTime: null, timer: null, holdLogged: false },
-        right: { active: false, startTime: null, timer: null, holdLogged: false }
-    }
+const mouseState = {
+  left: { lastClick: null, intervals: [] },
+  right: { lastClick: null, intervals: [] },
+  hold: {
+    left: { active: false, startTime: null, timer: null, holdLogged: false },
+    right: { active: false, startTime: null, timer: null, holdLogged: false }
+  }
 }
-
-const clickArea = document.getElementById('clickArea')
-const leftHoldArea = document.getElementById('leftHoldArea')
-const rightHoldArea = document.getElementById('rightHoldArea')
-const logBox = document.getElementById('logBox')
 
 const holdEls = {
   left: {
-    area: leftHoldArea,
+    area: document.getElementById('leftHoldArea'),
     time: document.getElementById('leftHoldTime'),
     state: document.getElementById('leftHoldState'),
     failCount: document.getElementById('leftHoldFailCount'),
-    buttonCode: 0,
     label: 'LEFT'
   },
   right: {
-    area: rightHoldArea,
+    area: document.getElementById('rightHoldArea'),
     time: document.getElementById('rightHoldTime'),
     state: document.getElementById('rightHoldState'),
     failCount: document.getElementById('rightHoldFailCount'),
-    buttonCode: 2,
     label: 'RIGHT'
   }
 }
 
-function log(message,type='neutral'){
-    const line=document.createElement('div')
-    line.className='log-line log-'+type
-    const t=new Date().toLocaleTimeString()
-    line.textContent=`[${t}] ${message}`
-    logBox.appendChild(line)
-    logBox.scrollTop=logBox.scrollHeight
+function setStatus(text, warn) {
+  const el = document.getElementById('status')
+  el.textContent = 'Status: ' + text
+  el.className = 'stat ' + (warn ? 'warn' : 'good')
 }
 
-function median(arr){
-    if(arr.length === 0) return null
-    const sorted = [...arr].sort((a,b)=>a-b)
-    const mid = Math.floor(sorted.length / 2)
-    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+function rememberInterval(button, interval) {
+  const intervals = mouseState[button].intervals
+  intervals.push(interval)
+  if (intervals.length > HISTORY_SIZE) intervals.shift()
+}
+function resetSession(button) { mouseState[button].intervals = [] }
+
+function clearHoldTimer(side) {
+  const hs = mouseState.hold[side]
+  if (hs.timer) { clearInterval(hs.timer); hs.timer = null }
 }
 
-function mean(arr){
-    if(arr.length === 0) return null
-    return arr.reduce((a,b)=>a+b,0) / arr.length
-}
-
-function stdDev(arr){
-    if(arr.length < 2) return 0
-    const avg = mean(arr)
-    const variance = arr.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / arr.length
-    return Math.sqrt(variance)
-}
-
-function mad(arr, med){
-    if(arr.length === 0 || med === null) return 0
-    return median(arr.map(v => Math.abs(v - med))) || 0
-}
-
-function rememberInterval(button, interval){
-    const intervals = state[button].intervals
-    intervals.push(interval)
-    if(intervals.length > HISTORY_SIZE) intervals.shift()
-}
-
-function resetSession(button){
-    state[button].intervals = []
-}
-
-function setStatus(text, warn){
-    const el = document.getElementById('status')
-    el.textContent = 'Status: ' + text
-    el.className = 'stat ' + (warn ? 'warn':'good')
-}
-
-function updateHoldState(side, text){
-    holdEls[side].state.textContent = text
-}
-
-function clearHoldTimer(side){
-    const holdState = state.hold[side]
-    if(holdState.timer){
-        clearInterval(holdState.timer)
-        holdState.timer = null
-    }
-}
-
-function startHold(side){
-    const holdState = state.hold[side]
-    const els = holdEls[side]
-    holdState.active = true
-    holdState.startTime = performance.now()
-    holdState.holdLogged = false
-    els.area.classList.remove('hold-fail')
-    els.area.classList.add('hold-active')
-    updateHoldState(side, `holding ${side} button...`)
-    els.time.textContent = '0'
-    setStatus(`${els.label} hold in progress`, false)
-
-    clearHoldTimer(side)
-    holdState.timer = setInterval(() => {
-        if(!holdState.active) return
-        const held = performance.now() - holdState.startTime
-        els.time.textContent = held.toFixed(0)
-        if(held >= HOLD_OK_LOG_MS && !holdState.holdLogged){
-            log(`${els.label} hold stable for ${held.toFixed(0)} ms`,'good')
-            holdState.holdLogged = true
-        }
-    }, 30)
-}
-
-function endHold(side, isUnexpected=false){
-    const holdState = state.hold[side]
-    const els = holdEls[side]
-    if(!holdState.active) return
-    const held = performance.now() - holdState.startTime
-    holdState.active = false
-    clearHoldTimer(side)
+function startHold(side) {
+  const hs = mouseState.hold[side], els = holdEls[side]
+  hs.active = true; hs.startTime = performance.now(); hs.holdLogged = false
+  els.area.classList.remove('hold-fail'); els.area.classList.add('hold-active')
+  els.state.textContent = 'holding...'
+  els.time.textContent = '0'
+  setStatus(`${els.label} hold in progress`, false)
+  clearHoldTimer(side)
+  hs.timer = setInterval(() => {
+    if (!hs.active) return
+    const held = performance.now() - hs.startTime
     els.time.textContent = held.toFixed(0)
-    els.area.classList.remove('hold-active')
-
-    if(isUnexpected || held < HOLD_FAIL_MIN_MS){
-        if(side === 'left'){
-            leftHoldFailCount++
-            els.failCount.textContent = leftHoldFailCount
-        } else {
-            rightHoldFailCount++
-            els.failCount.textContent = rightHoldFailCount
-        }
-        els.area.classList.add('hold-fail')
-        updateHoldState(side, 'possible hold failure')
-        setStatus(`Possible ${els.label} hold failure detected`, true)
-        log(`${els.label} possible hold failure (released after ${held.toFixed(1)} ms)`,'warn')
-    } else {
-        updateHoldState(side, 'released normally')
-        setStatus(`${els.label} hold released normally`, false)
-        log(`${els.label} hold released normally after ${held.toFixed(1)} ms`,'good')
+    if (held >= HOLD_OK_LOG_MS && !hs.holdLogged) {
+      log(`${els.label} hold stable for ${held.toFixed(0)} ms`, 'good')
+      hs.holdLogged = true
     }
+  }, 30)
 }
 
-function processClick(button, label){
-    const now = performance.now()
-    const buttonState = state[button]
-
-    if(button === 'left'){
-        leftCount++
-        document.getElementById('leftCount').textContent = leftCount
-    } else {
-        rightCount++
-        document.getElementById('rightCount').textContent = rightCount
-    }
-
-    if(buttonState.lastClick === null){
-        buttonState.lastClick = now
-        log(`${label} first click`,'neutral')
-        return
-    }
-
-    const interval = now - buttonState.lastClick
-    document.getElementById('interval').textContent = interval.toFixed(1)
-
-    if(interval < BOUNCE_MS){
-        if(button === 'left'){
-            leftDouble++
-            document.getElementById('leftDouble').textContent = leftDouble
-        } else {
-            rightDouble++
-            document.getElementById('rightDouble').textContent = rightDouble
-        }
-        setStatus(`Possible ${label} switch bounce detected`, true)
-        log(`${label} possible switch bounce (${interval.toFixed(1)} ms)`,'warn')
-        buttonState.lastClick = now
-        return
-    }
-
-    const history = buttonState.intervals
-    const historyMedian = median(history)
-    const historyStdDev = stdDev(history)
-    const historyMad = mad(history, historyMedian)
-    const isSteady = history.length >= MIN_STEADY_SAMPLES && historyStdDev <= 35
-
-    const lostThreshold = historyMedian === null
-        ? null
-        : Math.max(
-            historyMedian * 1.6,
-            historyMedian + 90,
-            historyMedian + (historyMad * 4),
-            260
-        )
-
-    const looksLikeLostClick = isSteady && lostThreshold !== null && interval > lostThreshold && interval < SESSION_GAP_MS
-
-    if(looksLikeLostClick){
-        lostCount++
-        document.getElementById('lostCount').textContent = lostCount
-        setStatus(`Possible ${label} lost click detected`, true)
-        log(`${label} possible lost click (gap ${interval.toFixed(1)} ms, baseline ${historyMedian.toFixed(1)} ms, threshold ${lostThreshold.toFixed(1)} ms)`,'warn')
-        resetSession(button)
-    } else {
-        setStatus(`${label} click OK`, false)
-        log(`${label} click (${interval.toFixed(1)} ms)`,'good')
-
-        if(interval <= SESSION_BUILD_GAP_MS){
-            rememberInterval(button, interval)
-        } else if(interval >= SESSION_GAP_MS){
-            resetSession(button)
-            log(`${label} session reset after long pause (${interval.toFixed(1)} ms)`,'neutral')
-        } else {
-            resetSession(button)
-            rememberInterval(button, interval)
-        }
-    }
-
-    buttonState.lastClick = now
+function endHold(side, isUnexpected = false) {
+  const hs = mouseState.hold[side], els = holdEls[side]
+  if (!hs.active) return
+  const held = performance.now() - hs.startTime
+  hs.active = false; clearHoldTimer(side)
+  els.time.textContent = held.toFixed(0)
+  els.area.classList.remove('hold-active')
+  if (isUnexpected || held < HOLD_FAIL_MIN_MS) {
+    if (side === 'left') { leftHoldFailCount++; els.failCount.textContent = leftHoldFailCount }
+    else { rightHoldFailCount++; els.failCount.textContent = rightHoldFailCount }
+    els.area.classList.add('hold-fail')
+    els.state.textContent = 'possible failure'
+    setStatus(`Possible ${els.label} hold failure`, true)
+    log(`${els.label} hold failure (released after ${held.toFixed(1)} ms)`, 'warn')
+  } else {
+    els.state.textContent = 'released OK'
+    setStatus(`${els.label} hold released normally`, false)
+    log(`${els.label} hold released after ${held.toFixed(1)} ms`, 'good')
+  }
 }
 
+function processClick(button, label) {
+  const now = performance.now()
+  const bs = mouseState[button]
+  if (button === 'left') { leftCount++; document.getElementById('leftCount').textContent = leftCount }
+  else { rightCount++; document.getElementById('rightCount').textContent = rightCount }
+  if (bs.lastClick === null) { bs.lastClick = now; log(`${label} first click`, 'neutral'); return }
+  const interval = now - bs.lastClick
+  document.getElementById('interval').textContent = interval.toFixed(1)
+  if (interval < BOUNCE_MS) {
+    if (button === 'left') { leftDouble++; document.getElementById('leftDouble').textContent = leftDouble }
+    else { rightDouble++; document.getElementById('rightDouble').textContent = rightDouble }
+    setStatus(`Possible ${label} switch bounce`, true)
+    log(`${label} switch bounce (${interval.toFixed(1)} ms)`, 'warn')
+    bs.lastClick = now; return
+  }
+  const history = bs.intervals
+  const hMedian = median(history), hStdDev = stdDev(history), hMad = mad(history, hMedian)
+  const isSteady = history.length >= MIN_STEADY_SAMPLES && hStdDev <= 35
+  const lostThreshold = hMedian === null ? null : Math.max(hMedian * 1.6, hMedian + 90, hMedian + hMad * 4, 260)
+  const looksLost = isSteady && lostThreshold !== null && interval > lostThreshold && interval < SESSION_GAP_MS
+  if (looksLost) {
+    lostCount++; document.getElementById('lostCount').textContent = lostCount
+    setStatus(`Possible ${label} lost click`, true)
+    log(`${label} lost click (gap ${interval.toFixed(1)} ms, baseline ${hMedian.toFixed(1)} ms)`, 'warn')
+    resetSession(button)
+  } else {
+    setStatus(`${label} click OK`, false)
+    log(`${label} click (${interval.toFixed(1)} ms)`, 'good')
+    if (interval <= SESSION_BUILD_GAP_MS) rememberInterval(button, interval)
+    else if (interval >= SESSION_GAP_MS) { resetSession(button); log(`${label} session reset`, 'neutral') }
+    else { resetSession(button); rememberInterval(button, interval) }
+  }
+  bs.lastClick = now
+}
+
+// Mouse event listeners
+const clickArea = document.getElementById('clickArea')
 clickArea.addEventListener('contextmenu', e => e.preventDefault())
-leftHoldArea.addEventListener('contextmenu', e => e.preventDefault())
-rightHoldArea.addEventListener('contextmenu', e => e.preventDefault())
-
 clickArea.addEventListener('mouseup', e => {
-    if(e.button === 0) processClick('left', 'LEFT')
-    if(e.button === 2) processClick('right', 'RIGHT')
+  if (e.button === 0) processClick('left', 'LEFT')
+  if (e.button === 2) processClick('right', 'RIGHT')
 })
 
-leftHoldArea.addEventListener('mousedown', e => {
-    if(e.button === 0) startHold('left')
-})
-rightHoldArea.addEventListener('mousedown', e => {
-    if(e.button === 2) startHold('right')
-})
-
-leftHoldArea.addEventListener('mouseup', e => {
-    if(e.button === 0) endHold('left', false)
-})
-rightHoldArea.addEventListener('mouseup', e => {
-    if(e.button === 2) endHold('right', false)
-})
-
-leftHoldArea.addEventListener('mouseleave', () => {
-    if(state.hold.left.active) updateHoldState('left', 'pointer left test area while holding')
-})
-rightHoldArea.addEventListener('mouseleave', () => {
-    if(state.hold.right.active) updateHoldState('right', 'pointer left test area while holding')
-})
-
+holdEls.left.area.addEventListener('contextmenu', e => e.preventDefault())
+holdEls.right.area.addEventListener('contextmenu', e => e.preventDefault())
+holdEls.left.area.addEventListener('mousedown', e => { if (e.button === 0) startHold('left') })
+holdEls.right.area.addEventListener('mousedown', e => { if (e.button === 2) startHold('right') })
+holdEls.left.area.addEventListener('mouseup', e => { if (e.button === 0) endHold('left', false) })
+holdEls.right.area.addEventListener('mouseup', e => { if (e.button === 2) endHold('right', false) })
+holdEls.left.area.addEventListener('mouseleave', () => { if (mouseState.hold.left.active) holdEls.left.state.textContent = 'pointer left area' })
+holdEls.right.area.addEventListener('mouseleave', () => { if (mouseState.hold.right.active) holdEls.right.state.textContent = 'pointer left area' })
 window.addEventListener('mouseup', e => {
-    if(e.button === 0 && state.hold.left.active) endHold('left', false)
-    if(e.button === 2 && state.hold.right.active) endHold('right', false)
+  if (e.button === 0 && mouseState.hold.left.active) endHold('left', false)
+  if (e.button === 2 && mouseState.hold.right.active) endHold('right', false)
 })
-
 window.addEventListener('blur', () => {
-    if(state.hold.left.active) endHold('left', true)
-    if(state.hold.right.active) endHold('right', true)
+  if (mouseState.hold.left.active) endHold('left', true)
+  if (mouseState.hold.right.active) endHold('right', true)
 })
 
-function reset(){
-    leftCount=0
-    rightCount=0
-    leftDouble=0
-    rightDouble=0
-    lostCount=0
-    leftHoldFailCount=0
-    rightHoldFailCount=0
-
-    state.left.lastClick = null
-    state.right.lastClick = null
-    state.left.intervals = []
-    state.right.intervals = []
-    state.hold.left.active = false
-    state.hold.left.startTime = null
-    state.hold.left.holdLogged = false
-    state.hold.right.active = false
-    state.hold.right.startTime = null
-    state.hold.right.holdLogged = false
-    clearHoldTimer('left')
-    clearHoldTimer('right')
-
-    document.getElementById('leftCount').textContent=0
-    document.getElementById('rightCount').textContent=0
-    document.getElementById('leftDouble').textContent=0
-    document.getElementById('rightDouble').textContent=0
-    document.getElementById('lostCount').textContent=0
-    document.getElementById('leftHoldFailCount').textContent=0
-    document.getElementById('rightHoldFailCount').textContent=0
-    document.getElementById('interval').textContent='-'
-    document.getElementById('status').textContent='Status: waiting'
-    holdEls.left.time.textContent='0'
-    holdEls.right.time.textContent='0'
-    updateHoldState('left', 'idle')
-    updateHoldState('right', 'idle')
-    holdEls.left.area.classList.remove('hold-active','hold-fail')
-    holdEls.right.area.classList.remove('hold-active','hold-fail')
-
-    logBox.innerHTML=''
-    log('Tester reset','neutral')
+/* ===== KEYBOARD MODULE ===== */
+const kbState = {
+  keyStates: new Map(),
+  chatterEvents: [],
+  chatterByKey: new Map(),
+  keyTimings: new Map(),
+  frequencyMap: new Map(),
+  chatterThresholdMs: 50,
+  totalKeyPresses: 0
 }
 
-log('Mouse tester ready','neutral')
-log('Lost-click detection now uses steady rhythm baseline instead of fixed 500 ms','neutral')
-log('Left and right hold tests added to detect unexpected release while holding','neutral')
+let chatterAlertTimeout = null
+
+// Typing test state
+const WORDS = [
+  "the","quick","brown","fox","jumps","over","lazy","dog",
+  "hello","world","keyboard","testing","switch","type","fast",
+  "book","cool","tree","keep","feel","good","food","room",
+  "all","will","full","well","tell","sell","bell","call",
+  "see","bee","free","agree","coffee","toffee",
+  "add","odd","buddy","daddy","ladder","matter",
+  "zero","jinx","quartz","sphinx","wizard","kayak",
+  "programming","development","mechanical","performance"
+]
+const WORDS_PER_LINE = 6
+let ttLines = [[], []]
+let ttInputs = [[], []]
+let ttWordIdx = 0, ttCharIdx = 0
+
+function getRandomWord() { return WORDS[Math.floor(Math.random() * WORDS.length)] }
+function generateLine() { return Array.from({length: WORDS_PER_LINE}, getRandomWord) }
+function initLineInputs() { return Array.from({length: WORDS_PER_LINE}, () => []) }
+
+function initTypingTest() {
+  ttLines[0] = generateLine(); ttLines[1] = generateLine()
+  ttInputs[0] = initLineInputs(); ttInputs[1] = initLineInputs()
+  ttWordIdx = 0; ttCharIdx = 0
+  renderTypingTest()
+}
+
+function advanceWord() {
+  ttCharIdx = 0
+  if (ttWordIdx >= WORDS_PER_LINE - 1) {
+    ttLines[0] = ttLines[1]; ttInputs[0] = ttInputs[1]
+    ttLines[1] = generateLine(); ttInputs[1] = initLineInputs()
+    ttWordIdx = 0
+  } else { ttWordIdx++ }
+  renderTypingTest()
+}
+
+function renderTypingTest() {
+  const el = document.getElementById('wordDisplay')
+  if (!el) return
+  let html = ''
+  for (let li = 0; li < 2; li++) {
+    html += `<div class="line ${li === 0 ? 'current-line' : 'next-line'}">`
+    for (let wi = 0; wi < ttLines[li].length; wi++) {
+      const word = ttLines[li][wi], inp = ttInputs[li][wi] || []
+      const isCurrent = li === 0 && wi === ttWordIdx
+      const isDone = li === 0 && wi < ttWordIdx
+      html += `<span class="word ${isCurrent ? 'active' : isDone ? 'completed' : ''}">`
+      for (let ci = 0; ci < word.length; ci++) {
+        const ic = inp[ci]
+        if (ic) html += `<span class="char ${ic.status}">${ic.char}</span>`
+        else if (isCurrent && ci === ttCharIdx) html += `<span class="char current">${word[ci]}</span>`
+        else html += `<span class="char pending">${word[ci]}</span>`
+      }
+      if (inp.length > word.length) {
+        for (let i = word.length; i < inp.length; i++) html += `<span class="char extra">${inp[i].char}</span>`
+      }
+      if (isCurrent && ttCharIdx >= word.length) html += '<span class="char current"></span>'
+      html += '</span> '
+    }
+    html += '</div>'
+  }
+  el.innerHTML = html
+}
+
+function processTypingInput(e) {
+  const word = ttLines[0][ttWordIdx]
+  if (!word) return
+  const inp = ttInputs[0][ttWordIdx]
+
+  if (e.key === 'Backspace') {
+    if (ttCharIdx > 0) { inp.pop(); ttCharIdx-- }
+    else if (ttWordIdx > 0) { ttWordIdx--; ttCharIdx = ttInputs[0][ttWordIdx].length }
+    renderTypingTest(); return
+  }
+  if (e.key === ' ') {
+    if (inp.length > 0 || ttWordIdx > 0) advanceWord()
+    return
+  }
+  if (e.key.length !== 1) return
+  const expected = word[ttCharIdx]
+  const isChatter = detectChatter(e)
+  let status = 'correct'
+  if (isChatter) status = 'chatter'
+  else if (e.key !== expected) status = 'error'
+  inp.push({char: e.key, status})
+  ttCharIdx++
+  renderTypingTest()
+}
+
+// Chatter detection
+function detectChatter(e) {
+  const now = performance.now()
+  const code = e.code
+  const st = kbState.keyStates.get(code) || {isDown: false, lastDownTime: 0, lastUpTime: 0}
+
+  if (st.isDown) return false // OS key repeat
+
+  const timeSinceUp = now - st.lastUpTime
+
+  const isChatter = st.lastUpTime > 0 && timeSinceUp < kbState.chatterThresholdMs
+
+  if (isChatter) {
+    kbState.chatterEvents.push({code, key: e.key, timeDelta: timeSinceUp, timestamp: now})
+    const k = e.code
+    kbState.chatterByKey.set(k, (kbState.chatterByKey.get(k) || 0) + 1)
+    showChatterAlert(e.key, timeSinceUp)
+    log(`CHATTER: ${e.key} (${e.code}) — ${timeSinceUp.toFixed(1)} ms after release`, 'chatter')
+
+    // Update per-key timing
+    const timing = kbState.keyTimings.get(code)
+    if (timing) timing.chatterCount++
+  }
+
+  // Record timing
+  const timeSinceDown = now - st.lastDownTime
+  recordKeyTiming(code, timeSinceDown)
+
+  st.isDown = true
+  st.lastDownTime = now
+  kbState.keyStates.set(code, st)
+  kbState.totalKeyPresses++
+  updateKbStats()
+
+  return isChatter
+}
+
+function recordKeyTiming(code, interval) {
+  let t = kbState.keyTimings.get(code)
+  if (!t) { t = {presses: 0, intervals: [], chatterCount: 0}; kbState.keyTimings.set(code, t) }
+  t.presses++
+  if (interval > 0 && interval < 5000) {
+    t.intervals.push(interval)
+    if (t.intervals.length > 50) t.intervals.shift()
+  }
+}
+
+function showChatterAlert(key, delta) {
+  const alert = document.getElementById('chatterAlert')
+  document.getElementById('chatterKey').textContent = key
+  document.getElementById('chatterTime').textContent = Math.round(delta)
+  alert.classList.remove('hidden', 'pulse')
+  void alert.offsetWidth // force reflow
+  alert.classList.add('pulse')
+  clearTimeout(chatterAlertTimeout)
+  chatterAlertTimeout = setTimeout(() => alert.classList.add('hidden'), 2500)
+}
+
+function updateKbStats() {
+  document.getElementById('kbTotalKeys').textContent = kbState.totalKeyPresses
+  document.getElementById('kbChatterCount').textContent = kbState.chatterEvents.length
+  const keys = Array.from(kbState.chatterByKey.entries()).map(([k,c]) => `${k}(${c})`).join(', ')
+  document.getElementById('kbAffectedKeys').textContent = keys ? `Affected: ${keys}` : ''
+}
+
+// Visual keyboard
+function getAltKey(code) {
+  if (code === 'MetaLeft') return 'OSLeft'
+  if (code === 'MetaRight') return 'OSRight'
+  if (code === 'Help') return 'Insert'
+  return code
+}
+
+function updateFrequency(code) {
+  kbState.frequencyMap.set(code, (kbState.frequencyMap.get(code) || 0) + 1)
+  const count = kbState.frequencyMap.get(code)
+  let corner = document.getElementById(code + '_corner')
+  const keyEl = document.getElementById(code)
+  if (!corner && keyEl) {
+    corner = document.createElement('div')
+    corner.id = code + '_corner'
+    corner.className = 'cornerText'
+    keyEl.prepend(corner)
+  }
+  if (corner) corner.textContent = count
+}
+
+function visualKeyDown(code) {
+  const el = document.getElementById(code)
+  if (!el) return
+  if (!el.classList.contains('raise')) el.classList.add('raise')
+  if (!el.classList.contains('pressed')) el.classList.add('pressed')
+  updateFrequency(code)
+}
+
+function visualKeyUp(code) {
+  const el = document.getElementById(code)
+  if (el) el.classList.remove('raise')
+}
+
+function highlightChatter(code) {
+  const el = document.getElementById(code)
+  if (!el) return
+  el.classList.add('chatter-highlight')
+  setTimeout(() => el.classList.remove('chatter-highlight'), 1000)
+}
+
+// Chatter report rendering (debounced)
+let reportRafId = null
+function scheduleReportUpdate() {
+  if (reportRafId) return
+  reportRafId = requestAnimationFrame(() => { reportRafId = null; renderChatterReport() })
+}
+
+function renderChatterReport() {
+  const el = document.getElementById('chatterReport')
+  const entries = Array.from(kbState.keyTimings.entries())
+    .filter(([, t]) => t.presses >= 2)
+    .sort((a, b) => b[1].chatterCount - a[1].chatterCount || b[1].presses - a[1].presses)
+
+  if (!entries.length) {
+    el.innerHTML = '<p class="empty-msg">Press keys to build timing data. Keys with detected chatter will appear here.</p>'
+    return
+  }
+
+  let html = '<table><thead><tr><th>Key</th><th>Presses</th><th>Chatter</th><th>Min Interval</th><th>Avg Interval</th></tr></thead><tbody>'
+  for (const [code, t] of entries) {
+    const cls = t.chatterCount > 0 ? 'has-chatter' : 'clean'
+    const intervals = t.intervals.filter(i => i < 2000)
+    const min = intervals.length ? Math.min(...intervals).toFixed(0) : '-'
+    const avg = intervals.length ? mean(intervals).toFixed(0) : '-'
+    html += `<tr class="${cls}"><td>${code}</td><td>${t.presses}</td><td>${t.chatterCount}</td><td>${min} ms</td><td>${avg} ms</td></tr>`
+  }
+  html += '</tbody></table>'
+  el.innerHTML = html
+}
+
+// Global keyboard event listeners
+document.addEventListener('keydown', e => {
+  if (activeTab !== 'keyboard') return
+
+  const code = getAltKey(e.code)
+
+  // CapsLock Mac workaround
+  if (code === 'CapsLock') {
+    if (!e.getModifierState('CapsLock')) {
+      visualKeyUp(code)
+      updateFrequency(code)
+      return
+    }
+  }
+
+  // Chatter detection (always runs, does not preventDefault)
+  const isChatter = detectChatter(e)
+
+  // Visual keyboard update
+  visualKeyDown(code)
+  if (isChatter) highlightChatter(code)
+
+  // Typing test mode: capture input and prevent default
+  if (activeSubMode === 'typingtest') {
+    e.preventDefault()
+    processTypingInput(e)
+  }
+  // Free type mode: do NOT preventDefault so textarea works normally
+
+  scheduleReportUpdate()
+})
+
+document.addEventListener('keyup', e => {
+  if (activeTab !== 'keyboard') return
+
+  const code = getAltKey(e.code)
+
+  // Update key state
+  const st = kbState.keyStates.get(e.code)
+  if (st) {
+    st.isDown = false
+    st.lastUpTime = performance.now()
+  }
+
+  if (code === 'CapsLock') return
+
+  visualKeyUp(code)
+
+  // PrintScreen fires on keyup only
+  if (code === 'PrintScreen') {
+    const el = document.getElementById(code)
+    if (el && !el.classList.contains('pressed')) el.classList.add('pressed')
+  }
+})
+
+// Threshold slider
+const thresholdSlider = document.getElementById('thresholdSlider')
+const thresholdValue = document.getElementById('thresholdValue')
+thresholdSlider.addEventListener('input', function() {
+  kbState.chatterThresholdMs = parseInt(this.value)
+  thresholdValue.textContent = this.value + 'ms'
+})
+
+/* ===== RESET ===== */
+function resetAll() {
+  // Mouse
+  leftCount = 0; rightCount = 0; leftDouble = 0; rightDouble = 0; lostCount = 0
+  leftHoldFailCount = 0; rightHoldFailCount = 0
+  mouseState.left.lastClick = null; mouseState.right.lastClick = null
+  mouseState.left.intervals = []; mouseState.right.intervals = []
+  mouseState.hold.left.active = false; mouseState.hold.right.active = false
+  mouseState.hold.left.holdLogged = false; mouseState.hold.right.holdLogged = false
+  clearHoldTimer('left'); clearHoldTimer('right')
+  document.getElementById('leftCount').textContent = 0
+  document.getElementById('rightCount').textContent = 0
+  document.getElementById('leftDouble').textContent = 0
+  document.getElementById('rightDouble').textContent = 0
+  document.getElementById('lostCount').textContent = 0
+  document.getElementById('leftHoldFailCount').textContent = 0
+  document.getElementById('rightHoldFailCount').textContent = 0
+  document.getElementById('interval').textContent = '-'
+  document.getElementById('status').textContent = 'Status: waiting'
+  holdEls.left.time.textContent = '0'; holdEls.right.time.textContent = '0'
+  holdEls.left.state.textContent = 'idle'; holdEls.right.state.textContent = 'idle'
+  holdEls.left.area.classList.remove('hold-active', 'hold-fail')
+  holdEls.right.area.classList.remove('hold-active', 'hold-fail')
+
+  // Keyboard
+  kbState.keyStates.clear(); kbState.chatterEvents = []; kbState.chatterByKey.clear()
+  kbState.keyTimings.clear(); kbState.frequencyMap.clear(); kbState.totalKeyPresses = 0
+  document.querySelectorAll('.keeb .key').forEach(k => {
+    k.classList.remove('raise', 'pressed', 'chatter-highlight')
+    const corner = k.querySelector('.cornerText')
+    if (corner) corner.textContent = ''
+  })
+  updateKbStats()
+  renderChatterReport()
+  document.getElementById('chatterAlert').classList.add('hidden')
+  const textarea = document.getElementById('freeformArea')
+  if (textarea) textarea.value = ''
+  initTypingTest()
+
+  // Log
+  logBox.innerHTML = ''
+  log('All tests reset', 'neutral')
+}
+
+// Init
+log('Input Tester ready', 'neutral')
+log('Mouse: Tests bounce, lost clicks, and hold reliability', 'neutral')
+log('Keyboard: Detects chatter (double-fire) on any key press', 'neutral')
 </script>
 </body>
 </html>
